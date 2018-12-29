@@ -32,7 +32,15 @@ LOG = logging.getLogger(__name__)
 
 class LBaaSBuilder(object):
     # F5 LBaaS Driver using iControl for BIG-IP to
-    # create objects (vips, pools) - not using an iApp."""
+    # create objects (vips, pools) - not using an iApp.
+    # pzhang(???): should we create error service repeatly.
+    sync_status = tuple([constants_v2.F5_PENDING_CREATE,
+                         constants_v2.F5_PENDING_UPDATE,
+                         constants_v2.F5_ERROR,
+                         constants_v2.F5_ACTIVE])
+
+    normal_status = tuple([constants_v2.F5_PENDING_CREATE,
+                           constants_v2.F5_PENDING_UPDATE])
 
     def __init__(self, conf, driver, l2_service=None):
         self.conf = conf
@@ -233,7 +241,7 @@ class LBaaSBuilder(object):
     def _get_pool_members(self, service, pool_id):
         """Return a list of members associated with given pool."""
         members = []
-        for member in service['members']:
+        for member in service.get('members', []):
             if member['pool_id'] == pool_id:
                 members.append(member)
         return members
@@ -256,7 +264,7 @@ class LBaaSBuilder(object):
                 self._set_status_as_active(monitor, force=force_active_status)
 
     def _assure_monitors_deleted(self, service):
-        monitors = service["healthmonitors"]
+        monitors = service.get("healthmonitors", [])
         loadbalancer = service["loadbalancer"]
         bigips = self.driver.get_config_bigips()
 
@@ -269,16 +277,23 @@ class LBaaSBuilder(object):
                     monitor['provisioning_status'] = constants_v2.F5_ERROR
 
     def _assure_members(self, service, all_subnet_hints):
+
         if not (("pools" in service) and ("members" in service)):
             return
 
-        members = service["members"]
+        members = service.get("members", [])
         loadbalancer = service["loadbalancer"]
         bigips = self.driver.get_config_bigips()
 
         # Group the members by pool.
         pool_to_member_map = dict()
         for member in members:
+            if member['provisioning_status'] in self.const_status:
+                if 'port' not in member and \
+                        member['provisioning_status'] != \
+                        constants_v2.F5_PENDING_DELETE:
+                    LOG.warning(
+                        "Member definition does not include Neutron port")
 
             if 'port' not in member and \
                member['provisioning_status'] != constants_v2.F5_PENDING_DELETE:

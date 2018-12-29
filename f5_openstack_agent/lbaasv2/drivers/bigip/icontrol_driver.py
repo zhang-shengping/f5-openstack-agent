@@ -330,7 +330,7 @@ class iControlDriver(LBaaSBaseDriver):
     def __init__(self, conf, registerOpts=True):
         # The registerOpts parameter allows a test to
         # turn off config option handling so that it can
-        # set the options manually instead. """
+        # set the options manually instead.
         super(iControlDriver, self).__init__(conf)
         self.conf = conf
         if registerOpts:
@@ -668,7 +668,7 @@ class iControlDriver(LBaaSBaseDriver):
             raise
 
     def _open_bigip(self, hostname):
-        # Open bigip connection """
+        # Open bigip connection
         try:
             bigip = self.__bigips[hostname]
             if bigip.status not in ['creating', 'error']:
@@ -838,7 +838,7 @@ class iControlDriver(LBaaSBaseDriver):
     def _validate_ha(self, bigip):
         # if there was only one address supplied and
         # this is not a standalone device, get the
-        # devices trusted by this device. """
+        # devices trusted by this device.
         device_group_name = None
         if self.conf.f5_ha_type == 'standalone':
             if len(self.hostnames) != 1:
@@ -1503,7 +1503,10 @@ class iControlDriver(LBaaSBaseDriver):
     def create_listener(self, listener, service):
         """Create virtual server."""
         LOG.debug("Creating listener")
-        return self._common_service_handler(service)
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_listener_status,
+                                   service)
 
     @serialized('update_listener')
     @is_operational
@@ -1511,63 +1514,179 @@ class iControlDriver(LBaaSBaseDriver):
         """Update virtual server."""
         LOG.debug("Updating listener")
         service['old_listener'] = old_listener
-        return self._common_service_handler(service)
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_listener_status,
+                                   service)
 
     @serialized('delete_listener')
     @is_operational
     def delete_listener(self, listener, service):
         """Delete virtual server."""
         LOG.debug("Deleting listener")
-        return self._common_service_handler(service)
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_listener_status,
+                                   service)
 
     @serialized('create_pool')
     @is_operational
     def create_pool(self, pool, service):
         """Create lb pool."""
         LOG.debug("Creating pool")
-        return self._common_service_handler(service)
+        target_listener = service["listeners"][0]
+        target_listener["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_pool_status,
+                                   service["pools"])
 
     @serialized('update_pool')
     @is_operational
     def update_pool(self, old_pool, pool, service):
         """Update lb pool."""
         LOG.debug("Updating pool")
-        return self._common_service_handler(service)
+        target_listener = service["listeners"][0]
+        target_listener["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_pool_status,
+                                   service["pools"])
 
     @serialized('delete_pool')
     @is_operational
     def delete_pool(self, pool, service):
         """Delete lb pool."""
         LOG.debug("Deleting pool")
-        return self._common_service_handler(service)
+        target_listener = service["listeners"][0]
+        target_listener["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_pool_status,
+                                   service["pools"])
+
+    @serialized('create_l7policy')
+    @is_operational
+    def create_l7policy(self, l7policy, service):
+        """Create lb l7policy."""
+        LOG.debug("Creating l7policy")
+        target_listener = service["listeners"][0]
+        target_listener["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_l7policy_status,
+                                   service["l7policies"])
+
+    @serialized('update_l7policy')
+    @is_operational
+    def update_l7policy(self, old_l7policy, l7policy, service):
+        """Update lb l7policy."""
+        LOG.debug("Updating l7policy")
+        target_listener = service["listeners"][0]
+        target_listener["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_l7policy_status,
+                                   service["l7policies"])
+
+    @serialized('delete_l7policy')
+    @is_operational
+    def delete_l7policy(self, l7policy, service):
+        """Delete lb l7policy."""
+        LOG.debug("Deleting l7policy")
+        target_listener = service["listeners"][0]
+        target_listener["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_l7policy_status,
+                                   service["l7policies"])
+
+    # TODO(pzhang): test this
+    @serialized('create_l7rule')
+    @is_operational
+    def create_l7rule(self, pool, service):
+        """Create lb l7rule."""
+        LOG.debug("Creating l7rule")
+        target_listener = service["listeners"][0]
+        target_listener["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_l7rule_status,
+                                   service['l7policy_rules'])
+
+    # TODO(pzhang): test this
+    @serialized('update_l7rule')
+    @is_operational
+    def update_l7rule(self, old_l7rule, l7rule, service):
+        """Update lb l7rule."""
+        LOG.debug("Updating l7rule")
+        target_listener = service["listeners"][0]
+        target_listener["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_l7rule_status,
+                                   service['l7policy_rules'])
+
+    # TODO(pzhang): test this
+    @serialized('delete_l7rule')
+    @is_operational
+    def delete_l7rule(self, l7rule, service):
+        """Delete lb l7rule."""
+        LOG.debug("Deleting l7rule")
+        target_listener = service["listeners"][0]
+        target_listener["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_l7rule_status,
+                                   service['l7policy_rules'])
 
     @serialized('create_member')
     @is_operational
     def create_member(self, member, service):
         """Create pool member."""
         LOG.debug("Creating member")
-        return self._common_service_handler(service)
+        target_pool = service["pools"][0]
+        target_pool["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_member_status,
+                                   service["members"])
 
     @serialized('update_member')
     @is_operational
     def update_member(self, old_member, member, service):
         """Update pool member."""
         LOG.debug("Updating member")
-        return self._common_service_handler(service)
+        target_pool = service["pools"][0]
+        target_pool["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_member_status,
+                                   service["members"])
 
     @serialized('delete_member')
     @is_operational
     def delete_member(self, member, service):
         """Delete pool member."""
         LOG.debug("Deleting member")
-        return self._common_service_handler(service, delete_event=True)
+        target_pool = service["pools"][0]
+        target_pool["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service, delete_event=True)
+        return self._update_target(service,
+                                   self._update_member_status,
+                                   service["members"])
 
     @serialized('create_health_monitor')
     @is_operational
     def create_health_monitor(self, health_monitor, service):
         """Create pool health monitor."""
         LOG.debug("Creating health monitor")
-        return self._common_service_handler(service)
+        target_pool = service["pools"][0]
+        target_pool["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_health_monitor_status,
+                                   service["healthmonitors"])
 
     @serialized('update_health_monitor')
     @is_operational
@@ -1575,14 +1694,38 @@ class iControlDriver(LBaaSBaseDriver):
                               health_monitor, service):
         """Update pool health monitor."""
         LOG.debug("Updating health monitor")
-        return self._common_service_handler(service)
+        target_pool = service["pools"][0]
+        target_pool["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_health_monitor_status,
+                                   service["healthmonitors"])
 
     @serialized('delete_health_monitor')
     @is_operational
     def delete_health_monitor(self, health_monitor, service):
         """Delete pool health monitor."""
         LOG.debug("Deleting health monitor")
-        return self._common_service_handler(service)
+        target_pool = service["pools"][0]
+        target_pool["provisioning_status"] = "PENDING_UPDATE"
+        self._common_service_handler(service)
+        return self._update_target(service,
+                                   self._update_health_monitor_status,
+                                   service["healthmonitors"])
+
+    def _update_target(self, service,
+                       update_method=None, target=None):
+        if self.do_service_update:
+            if target is not None and update_method is not None:
+                update_method(target)
+            self._update_loadbalancer_status(service, timed_out=False)
+        loadbalancer = service.get('loadbalancer', {})
+        lb_provisioning_status = loadbalancer.get("provisioning_status",
+                                                  f5const.F5_ERROR)
+        lb_pending = \
+            (lb_provisioning_status == f5const.F5_PENDING_CREATE or
+             lb_provisioning_status == f5const.F5_PENDING_UPDATE)
+        return lb_pending
 
     @is_operational
     def get_stats(self, service):

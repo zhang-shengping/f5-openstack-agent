@@ -33,7 +33,7 @@ except ImportError as CriticalError:
 
 
 try:
-    from neutron.agent.linux import interface
+    from neutron.conf.agent.common import INTERFACE_OPTS
     from neutron.common import config as common_config
     from neutron.common import rpc as n_rpc
     try:
@@ -71,7 +71,7 @@ def main():
     """F5 LBaaS agent for OpenStack."""
     cfg.CONF.register_opts(OPTS)
     cfg.CONF.register_opts(manager.OPTS)
-    cfg.CONF.register_opts(interface.OPTS)
+    cfg.CONF.register_opts(INTERFACE_OPTS)
 
     config.register_agent_state_opts_helper(cfg.CONF)
     config.register_root_helper(cfg.CONF)

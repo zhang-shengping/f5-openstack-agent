@@ -74,6 +74,7 @@ class ListenerServiceBuilder(object):
             if persist and persist.get('type', "") == "APP_COOKIE":
                 self._add_cookie_persist_rule(vip, persist, bigip)
 
+            import pdb; pdb.set_trace()
             try:
                 if self.vs_helper.exists(bigip,
                                          name=vip['name'],

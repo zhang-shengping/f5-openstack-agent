@@ -176,8 +176,10 @@ class LBaaSBuilder(object):
         pools = service.get("pools", list())
         l7policies = service.get("l7policies", list())
         l7rules = service.get("l7policy_rules", list())
+        irules = service.get("irules", dict())
         bigips = self.driver.get_config_bigips()
 
+        import pdb; pdb.set_trace()
         for listener in listeners:
             error = False
             if self._is_not_pending_delete(listener):
@@ -187,6 +189,7 @@ class LBaaSBuilder(object):
                        "pools": pools,
                        "l7policies": l7policies,
                        "l7policy_rules": l7rules,
+                       "irules": irules.get(listener["id"], list()),
                        "networks": networks}
 
                 # create_listener() will do an update if VS exists
@@ -432,6 +435,7 @@ class LBaaSBuilder(object):
         listener_policy_map = dict()
         bigips = self.driver.get_config_bigips()
         lbaas_service = LbaasServiceObject(service)
+        service['irules'] = dict()
 
         l7policies = service['l7policies']
         LOG.debug("L7 debug: processing policies: %s", l7policies)
@@ -450,9 +454,16 @@ class LBaaSBuilder(object):
 
         for listener_id, policy in listener_policy_map.items():
             error = False
+            # import pdb; pdb.set_trace()
             if policy['f5_policy'].get('rules', list()):
+                # import pdb; pdb.set_trace()
                 error = self.l7service.create_l7policy(
                     policy['f5_policy'], bigips)
+
+            import pdb; pdb.set_trace()
+            if policy['iRules']:
+                error = self.l7service.create_irule(
+                        policy['iRules'], bigips)
 
             for p in service['l7policies']:
                 if self._is_not_pending_delete(p):
@@ -466,6 +477,7 @@ class LBaaSBuilder(object):
                 listener = lbaas_service.get_listener(listener_id)
                 if listener:
                     listener['f5_policy'] = policy['f5_policy']
+                service['irules'][listener_id] = policy['iRules']
             else:
                 loadbalancer['provisioning_status'] = \
                     constants_v2.F5_ERROR

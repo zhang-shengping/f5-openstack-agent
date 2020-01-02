@@ -536,7 +536,13 @@ class ServiceModelAdapter(object):
         # change it back when client command changes
         oneconnect = listener.get('oneconnect', False)
 
-        if protocol not in ["HTTP", "HTTPS", "TCP", "TERMINATED_HTTPS", "UDP"]:
+        if protocol not in ["HTTP",
+                            "HTTPS",
+                            "TCP",
+                            "TERMINATED_HTTPS",
+                            "UDP",
+                            "TRIANGLE",
+                            "FTP"]:
             LOG.warning("Listener protocol unrecognized: %s",
                         listener["protocol"])
 
@@ -551,11 +557,13 @@ class ServiceModelAdapter(object):
         else:
             virtual_type = 'standard'
 
-        if virtual_type == 'fastl4' and protocol == 'TRIANGLE':
+        if protocol == 'TRIANGLE':
             # pzhang customerized profile GSLB
             vip['profiles'] = ['/Common/GSLB']
             vip['translateAddress'] = 'enabled'
             vip['translatePort'] = 'disabled'
+        elif protocol == 'FTP':
+            vip['profiles'] = ['/Common/ftp']
         elif virtual_type == 'fastl4':
             vip['profiles'] = ['/Common/fastL4']
         else:

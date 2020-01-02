@@ -1539,8 +1539,9 @@ class iControlDriver(LBaaSBaseDriver):
     def create_listener(self, listener, service):
         """Create virtual server."""
         LOG.debug("Creating listener")
-        service['listeners'][0]['protocol'] = "TRIANGLE"
-        service['listeners'][0]['oneconnect']
+        # service['listeners'][0]['protocol'] = "TRIANGLE"
+        service['listeners'][0]['protocol'] = "FTP"
+        service['listeners'][0]['oneconnect'] = True
 
         return self._common_service_handler(service)
 
@@ -1549,6 +1550,7 @@ class iControlDriver(LBaaSBaseDriver):
     def update_listener(self, old_listener, listener, service):
         """Update virtual server."""
         LOG.debug("Updating listener")
+        service['listeners'][0]['oneconnect'] = False
         service['old_listener'] = old_listener
         return self._common_service_handler(service)
 

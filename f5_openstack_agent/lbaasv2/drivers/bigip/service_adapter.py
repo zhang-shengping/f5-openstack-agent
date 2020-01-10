@@ -521,7 +521,11 @@ class ServiceModelAdapter(object):
     def _add_profiles_session_persistence(self, listener, pool, vip):
 
         protocol = listener.get('protocol', "")
-        oneconnect = listener.get('oneconnect', False)
+        oneconnect = listener.get('description', False)
+        if oneconnect == "oneconnect=True":
+            oneconnect = True
+        else:
+            oneconnect = False
 
         if protocol not in ["HTTP",
                             "HTTPS",

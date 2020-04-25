@@ -57,6 +57,7 @@ class ListenerServiceBuilder(object):
         network_id = loadbalancer.get('network_id', "")
 
         vip = self.service_adapter.get_virtual(service)
+        # import pdb; pdb.set_trace()
         tls = self.service_adapter.get_tls(service)
         if tls:
             tls['name'] = vip['name']

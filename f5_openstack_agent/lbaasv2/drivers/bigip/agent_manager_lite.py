@@ -902,18 +902,25 @@ class LbaasAgentManager(periodic_task.PeriodicTasks):  # b --> B
     @log_helpers.log_method_call
     def create_loadbalancer(self, context, loadbalancer, service):
         """Handle RPC cast from plugin to create_loadbalancer."""
+        id = loadbalancer['id']
         try:
-            service_pending = \
-                self.lbdriver.create_loadbalancer(loadbalancer,
-                                                  service)
-            self.cache.put(service, self.agent_host)
-            if service_pending:
-                self.needs_resync = True
-
+            mgr = resource_manager.LoadBalancerManager(self.lbdriver)
+            mgr.create(loadbalancer, service)
+            provision_status = constants_v2.F5_ACTIVE
         except f5_ex.F5NeutronException as exc:
             LOG.error("f5_ex.NeutronException: %s" % exc.msg)
         except Exception as exc:
             LOG.error("Exception: %s" % exc.message)
+        finally:
+            try:
+                self.plugin_rpc.update_loadbalancer_status(
+                    id, provision_status,
+                    loadbalancer['operating_status']
+                )
+                LOG.debug("Finish creating loadbalancer %s", id)
+            except Exception as ex:
+                LOG.exception("Fail to update status of loadbalancer %s "
+                              "Exception: %s" % ex.message)
 
     @log_helpers.log_method_call
     def update_loadbalancer(self, context, old_loadbalancer,
@@ -943,16 +950,26 @@ class LbaasAgentManager(periodic_task.PeriodicTasks):  # b --> B
     @log_helpers.log_method_call
     def delete_loadbalancer(self, context, loadbalancer, service):
         """Handle RPC cast from plugin to delete_loadbalancer."""
+        id = loadbalancer['id']
         try:
-            service_pending = \
-                self.lbdriver.delete_loadbalancer(loadbalancer, service)
-            self.cache.remove_by_loadbalancer_id(loadbalancer['id'])
-            if service_pending:
-                self.needs_resync = True
+            mgr = resource_manager.LoadBalancerManager(self.lbdriver)
+            mgr.delete(loadbalancer, service)
+            provision_status = constants_v2.F5_ACTIVE
         except f5_ex.F5NeutronException as exc:
             LOG.error("f5_ex.F5NeutronException: %s" % exc.msg)
         except Exception as exc:
             LOG.error("Exception: %s" % exc.message)
+        finally:
+            try:
+                self.plugin_rpc.loadbalancer_destroyed(id)
+                self.plugin_rpc.update_loadbalancer_status(
+                    id, provision_status,
+                    loadbalancer['operating_status']
+                )
+                LOG.debug("Finish to update status of loadbalancer %s", id)
+            except Exception as ex:
+                LOG.exception("Fail to update status of loadbalancer %s "
+                              "Exception: %s" % ex.message)
 
     @log_helpers.log_method_call
     def update_loadbalancer_stats(self, context, loadbalancer, service):
@@ -1144,11 +1161,10 @@ class LbaasAgentManager(periodic_task.PeriodicTasks):  # b --> B
         loadbalancer = service['loadbalancer']
         id = member['id']
         try:
-            mgr = resource_manager.MemberManager(self.lbdriver)
-            mgr.create(member, service)
+            # TODO(qzhao): Deploy config to BIG-IP
             provision_status = constants_v2.F5_ACTIVE
             operating_status = constants_v2.F5_ONLINE
-            LOG.debug("Finish to create member %s", id)
+            LOG.exception("Finish to create member %s", id)
         except Exception as ex:
             LOG.error("Fail to create member %s Exception: %s", id, ex.message)
             provision_status = constants_v2.F5_ERROR
@@ -1173,8 +1189,7 @@ class LbaasAgentManager(periodic_task.PeriodicTasks):  # b --> B
         loadbalancer = service['loadbalancer']
         id = member['id']
         try:
-            mgr = resource_manager.MemberManager(self.lbdriver)
-            mgr.update(old_member, member, service)
+            # TODO(qzhao): Deploy config to BIG-IP
             provision_status = constants_v2.F5_ACTIVE
             LOG.debug("Finish to update member %s", id)
         except Exception as ex:
@@ -1202,8 +1217,7 @@ class LbaasAgentManager(periodic_task.PeriodicTasks):  # b --> B
         loadbalancer = service['loadbalancer']
         id = member['id']
         try:
-            mgr = resource_manager.MemberManager(self.lbdriver)
-            mgr.delete(member, service)
+            # TODO(qzhao): Deploy config to BIG-IP
             provision_status = constants_v2.F5_ACTIVE
             LOG.debug("Finish to delete member %s", id)
         except Exception as ex:
